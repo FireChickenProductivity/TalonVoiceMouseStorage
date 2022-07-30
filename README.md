@@ -1,6 +1,6 @@
 Use voice commands to store mouse positions and then click on them. This is a work in progress that has not been thoroughly tested yet.
 
-#Commands
+# Commands
 storage new (dictate text here):
 
 Stores the current mouse position with the name given by the text dictated after storage new unless a mouse position has already been stored with the same name within the active context.
