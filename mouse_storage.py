@@ -207,11 +207,11 @@ def stored_position_should_be_title_specific():
 
 def go_to_mouse_position(name):
     active_context = get_active_context()
-    position = get_position_with_specified_name_best_matching_context(name, active_context)
-    if relativity.get() == 'WINDOW':
+    position, position_relativity = get_position_and_relativity_with_specified_name_best_matching_context(name, active_context)
+    if position_relativity == PositionRelativity.WINDOW:
         position = make_position_relative_to_window_absolute(position)
-    elif relativity.get() == 'MOUSE':
-        position = make_position_relative_to_window_absolute(position)
+    elif position_relativity == PositionRelativity.MOUSE:
+        position = make_position_relative_to_reference_point_absolute(position)
     horizontal = position.get_horizontal()
     vertical = position.get_vertical()
     actions.mouse_move(horizontal, vertical)
@@ -263,9 +263,17 @@ def get_path_with_specified_name_best_matching_context(name, context):
     return best_match_path
 
 def get_position_with_specified_name_best_matching_context(name, context):
+    data = get_data_with_specified_name_best_matching_context(name, context)
+    return data.get_position()
+
+def get_data_with_specified_name_best_matching_context(name, context):
     best_match_path = get_path_with_specified_name_best_matching_context(name, context)
     data = PositionFileData(best_match_path)
-    return data.get_position()
+    return data
+
+def get_position_and_relativity_with_specified_name_best_matching_context(name, context):
+    data = get_data_with_specified_name_best_matching_context(name, context)
+    return data.get_position(), data.get_relativity()
        
 def get_data_from_directory_and_filename(directory, filename):
     path = os.path.join(directory, filename)
@@ -289,9 +297,8 @@ def make_position_relative_to_window_absolute(position):
     return absolute_position
    
 def make_position_relative_to_reference_point_absolute(position):
-    reference_point_file = get_reference_point()
-    reference_point = reference_point_file.get()
-    return position + reference_point
+    current_position = get_mouse_position()
+    return position + current_position
 
 def get_reference_point():
    return MousePositionFile(DATA_DIRECTORY, "reference point")
