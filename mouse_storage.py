@@ -1,11 +1,15 @@
+import os
+
 from talon import Module, actions, ui, ctrl
 
-from .project_types import * 
+from .project_types import *
 
-import os
+
+
 MOUSE_STORAGE_FOLDER_NAME = 'positions'
 PROJECT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 MOUSE_STORAGE_DIRECTORY = os.path.join(PROJECT_DIRECTORY, MOUSE_STORAGE_FOLDER_NAME)
+DATA_DIRECTORY = os.path.join(PROJECT_DIRECTORY, "data")
 
 module = Module()
 
@@ -49,7 +53,7 @@ manually_set_mouse_position_mode = ''
 def get_mouse_position_mode():
     if not manually_set_mouse_position_mode:
         return default_mouse_position_mode.get()
-    return manually_set_mouse_position_mode 
+    return manually_set_mouse_position_mode
 
 def get_required_mode():
     if require_mode.get():
@@ -75,7 +79,7 @@ class Actions:
 
     def mouse_position_storage_update_manually_set_mode(new_mode: str):
         '''Updates the mouse position storage manually set mode, which overrides the default mode'''
-        global manually_set_mouse_position_mode 
+        global manually_set_mouse_position_mode
         manually_set_mouse_position_mode  = new_mode
 
     def mouse_position_storage_store_position_with_name(name: str):
@@ -90,7 +94,11 @@ class Actions:
     def mouse_positions_storage_go_to_position(name: str):
         '''Goes to the mouse position stored with the specified name with the most specific matching context'''
         go_to_mouse_position(name)
-    
+    def mouse_positions_storage_update_reference_position():
+        '''Updates the mouse stored reference position with current mouse location'''
+        position = get_reference_point()
+        position.set_to_current_mouse_position()
+   
 
 def create_directory_if_nonexistent(directory):
     if not os.path.exists(directory):
@@ -127,7 +135,7 @@ def update_mouse_position_with_name(name):
         tell_user_position_unavailable_with_name(name)
 def tell_user_position_unavailable_with_name(name):
     actions.app.notify(f'The position {name} does not exist in an active context!')
-    
+   
 
 def store_mouse_position_at_directory(position, directory):
     path = get_mouse_position_storage_path_from_directory(directory)
@@ -172,8 +180,10 @@ def store_mouse_position_at_path(position, path):
         position_file.write(context_string)
         if relativity.get() == 'WINDOW':
             position = get_position_relative_to_active_window(position)
+        elif relativity.get() == 'MOUSE':
+            position = get_position_relative_to_reference_point(position)
         position_file.write(str(position) + '\n')
-        position_relativity = get_active_storage_relativity() 
+        position_relativity = get_active_storage_relativity()
         position_file.write(str(position_relativity))
 
 def get_active_storage_relativity():
@@ -199,6 +209,8 @@ def go_to_mouse_position(name):
     active_context = get_active_context()
     position = get_position_with_specified_name_best_matching_context(name, active_context)
     if relativity.get() == 'WINDOW':
+        position = make_position_relative_to_window_absolute(position)
+    elif relativity.get() == 'MOUSE':
         position = make_position_relative_to_window_absolute(position)
     horizontal = position.get_horizontal()
     vertical = position.get_vertical()
@@ -254,7 +266,7 @@ def get_position_with_specified_name_best_matching_context(name, context):
     best_match_path = get_path_with_specified_name_best_matching_context(name, context)
     data = PositionFileData(best_match_path)
     return data.get_position()
-        
+       
 def get_data_from_directory_and_filename(directory, filename):
     path = os.path.join(directory, filename)
     data = PositionFileData(path)
@@ -266,7 +278,16 @@ def get_position_relative_to_active_window(position):
     relative_position = position - window_position
     return relative_position
 
+def get_position_relative_to_reference_point(position):
+    return position - get_reference_point()
+
 def make_position_relative_to_window_absolute(position):
     window_position = actions.user.mouse_position_storage_current_window_position()
     absolute_position = position + window_position
     return absolute_position
+   
+def make_position_relative_to_reference_point_absolute(position):
+    return position + get_reference_point()
+
+def get_reference_point():
+   return MousePositionFile(DATA_DIRECTORY, "reference point")
