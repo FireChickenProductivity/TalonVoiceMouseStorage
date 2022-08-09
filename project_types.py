@@ -1,5 +1,6 @@
 import enum
-
+import os
+from talon import ctrl, actions
 
 
 class MousePosition:
@@ -9,12 +10,12 @@ class MousePosition:
     def __init__(self, horizontal: int, vertical: int):
         self.horizontal = horizontal
         self.vertical = vertical
-    
+   
     def get_horizontal(self):
         return self.horizontal
     def get_vertical(self):
         return self.vertical
-    
+   
     def __add__(self, other):
         result = MousePosition(0, 0)
         result += self
@@ -34,6 +35,9 @@ class MousePosition:
         self.vertical -= other.vertical
         return self
 
+    def go(self):
+        actions.mouse_move(self.horizontal, self.vertical)
+
     def __str__(self) -> str:
         return MousePosition.STRING_START + str(self.horizontal) + MousePosition.COORDINATE_SEPARATOR \
         + str(self.vertical) + MousePosition.STRING_ENDING
@@ -48,6 +52,47 @@ class MousePosition:
         vertical_ending = text.index(MousePosition.STRING_ENDING)
         vertical = int(text[vertical_start : vertical_ending])
         return MousePosition(horizontal, vertical)
+
+class MousePositionFile:
+    def __init__(self, folder: str, name: str):
+        self.folder = folder
+        self.name = name
+        self._initialize_file_if_nonexistent()
+        self._retrieve_position()
+       
+    def get(self):
+        return self.position
+       
+    def set(self, position: MousePosition):
+        self.position = position
+        self._store_position()
+   
+    def set_to_current_mouse_position(self):
+        horizontal, vertical = ctrl.mouse_pos()
+        position = MousePosition(horizontal, vertical)
+        self.set(position)
+   
+    def _store_position(self):
+        with open(self.get_path(), 'w') as position_file:
+            position_text = str(self.position)
+            position_file.write(position_text)
+   
+    def _retrieve_position(self):
+        with open(self.get_path(), 'r') as position_file:
+            position_text = position_file.readline().rstrip('\n\r')
+            self.position = MousePosition.from_text(position_text)
+   
+    def get_path(self):
+        return os.path.join(self.folder, self.name)
+   
+    def _initialize_file_if_nonexistent(self):
+        if not os.path.exists(self.get_path()):
+            self._make_directory_if_nonexistent()
+            self.set(MousePosition(0, 0))
+   
+    def _make_directory_if_nonexistent(self):
+        if not os.path.exists(self.folder):
+            os.makedirs(self.folder)
 
 class ContextDataNotFound(Exception):
     pass
@@ -98,7 +143,7 @@ class PositionContext:
 
     def __eq__(self, other):
         return self.app == other.app and self.title_part == other.title_part and self.mouse_position_mode == other.mouse_position_mode
-    
+   
     def __str__(self) -> str:
         result = ''
         if self.app:
@@ -115,6 +160,7 @@ def text_from_string_after_substring(text, substring):
 class PositionRelativity(enum.Enum):
     ABSOLUTE = enum.auto()
     WINDOW = enum.auto()
+    MOUSE = enum.auto()
 
 STORED_POSITION_RELATIVITY_START = 'PositionRelativity.'
 
@@ -124,7 +170,7 @@ class PositionFileData:
         self.context = PositionContext()
         self.relativity = PositionRelativity.ABSOLUTE
         self._get_data_from_file(path)
-        
+       
     def _get_data_from_file(self, path):
         with open(path, 'r') as position_file:
             for line in position_file:
@@ -151,4 +197,5 @@ class PositionFileData:
         result = f'position: {self.position}'
         result += 'context:' + str(self.context)
         result += 'relativity:' + str(self.relativity)
+        return result
         return result
