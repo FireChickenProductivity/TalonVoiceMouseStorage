@@ -279,7 +279,9 @@ def get_position_relative_to_active_window(position):
     return relative_position
 
 def get_position_relative_to_reference_point(position):
-    return position - get_reference_point()
+    reference_point_file = get_reference_point()
+    reference_point = reference_point_file.get()
+    return position - reference_point
 
 def make_position_relative_to_window_absolute(position):
     window_position = actions.user.mouse_position_storage_current_window_position()
@@ -287,7 +289,9 @@ def make_position_relative_to_window_absolute(position):
     return absolute_position
    
 def make_position_relative_to_reference_point_absolute(position):
-    return position + get_reference_point()
+    reference_point_file = get_reference_point()
+    reference_point = reference_point_file.get()
+    return position + reference_point
 
 def get_reference_point():
    return MousePositionFile(DATA_DIRECTORY, "reference point")
